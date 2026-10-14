@@ -1,1 +1,1 @@
-# Services package
+# App package
