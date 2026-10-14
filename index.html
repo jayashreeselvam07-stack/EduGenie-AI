@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduGenie - AI Learning Assistant</title>
+  <meta name="description" content="EduGenie is an AI learning assistant helping students master concepts, generate quizzes, summarize study notes, and build custom learning paths in English and Tamil.">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header class="header-bar">
+    <div class="header-container">
+      <a href="/" class="logo-group" aria-label="EduGenie Home">
+        <div class="logo-icon">🧞✨</div>
+        <div class="logo-text">
+          <span class="brand-name" data-t="appTitle">EduGenie</span>
+          <span class="brand-tagline" data-t="appSubtitle">AI Learning Assistant</span>
+        </div>
+      </a>
+
+      <div class="controls-group">
+        <div class="model-badge">
+          <span class="dot-online"></span>
+          <span>{{ model_name }}</span>
+        </div>
+
+        <!-- UI Language Selector -->
+        <div class="lang-selector-box">
+          <span class="lang-label" data-t="uiLanguageLabel">UI Language:</span>
+          <select id="uiLangSelect" class="lang-select" aria-label="Interface Language">
+            <option value="en" selected>English 🇬🇧</option>
+            <option value="ta">தமிழ் (Tamil) 🇮🇳</option>
+          </select>
+        </div>
+
+        <!-- AI Output Language Selector -->
+        <div class="lang-selector-box">
+          <span class="lang-label" data-t="aiLanguageLabel">AI Output Language:</span>
+          <select id="aiLangSelect" class="lang-select" aria-label="AI Response Language">
+            <option value="en" selected>English 🇬🇧</option>
+            <option value="ta">தமிழ் (Tamil) 🇮🇳</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Missing API Key Banner (Only shown if key is missing/unconfigured) -->
+  {% if not gemini_configured %}
+  <div class="banner-alert" id="apiKeyBanner" role="alert">
+    <div class="banner-content">
+      <div class="banner-icon">⚠️</div>
+      <div>
+        <div class="banner-title" data-t="apiKeyMissingTitle">Gemini API Key Required</div>
+        <div class="banner-desc" data-t="apiKeyMissingText">
+          EduGenie is currently running in setup mode. Please configure your <code>GEMINI_API_KEY</code> in <code>.env</code> to generate AI content.
+        </div>
+      </div>
+    </div>
+    <button id="openModalBtn" class="btn-secondary" data-t="setupInstructionsBtn">View Setup Guide</button>
+  </div>
+  {% endif %}
+
+  <!-- Main Container -->
+  <main class="main-wrapper">
+
+    <!-- Dashboard Tabs Navigation -->
+    <nav class="tabs-dashboard" aria-label="Study Tools Dashboard">
+      
+      <div class="tab-card active" data-tab="ask" tabindex="0" role="tab" aria-selected="true" aria-controls="pane-ask">
+        <div class="tab-icon">💬</div>
+        <div class="tab-info">
+          <span class="tab-title" data-t="tabAsk">Ask EduGenie</span>
+          <span class="tab-badge">Q&A & Explanations</span>
+        </div>
+      </div>
+
+      <div class="tab-card" data-tab="explain" tabindex="0" role="tab" aria-selected="false" aria-controls="pane-explain">
+        <div class="tab-icon">💡</div>
+        <div class="tab-info">
+          <span class="tab-title" data-t="tabExplain">Explain Concept</span>
+          <span class="tab-badge">Multi-Level Insights</span>
+        </div>
+      </div>
+
+      <div class="tab-card" data-tab="quiz" tabindex="0" role="tab" aria-selected="false" aria-controls="pane-quiz">
+        <div class="tab-icon">🎯</div>
+        <div class="tab-info">
+          <span class="tab-title" data-t="tabQuiz">Generate Quiz</span>
+          <span class="tab-badge">3 MCQs & Scores</span>
+        </div>
+      </div>
+
+      <div class="tab-card" data-tab="summarize" tabindex="0" role="tab" aria-selected="false" aria-controls="pane-summarize">
+        <div class="tab-icon">📝</div>
+        <div class="tab-info">
+          <span class="tab-title" data-t="tabSummarize">Summarize Notes</span>
+          <span class="tab-badge">Key Points & Terms</span>
+        </div>
+      </div>
+
+      <div class="tab-card" data-tab="learning-path" tabindex="0" role="tab" aria-selected="false" aria-controls="pane-learning-path">
+        <div class="tab-icon">🗺️</div>
+        <div class="tab-info">
+          <span class="tab-title" data-t="tabPath">Learning Path</span>
+          <span class="tab-badge">Step-by-step Plan</span>
+        </div>
+      </div>
+
+    </nav>
+
+    <!-- Tool Panes -->
+
+    <!-- Pane 1: Ask EduGenie -->
+    <section id="pane-ask" class="tool-pane active" role="tabpanel">
+      <div class="pane-header">
+        <h1 class="pane-title" data-t="askTitle">Ask EduGenie</h1>
+        <p class="pane-desc" data-t="askDesc">Ask any academic or general knowledge question to get a concise, accurate answer with a clear explanation.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="askInput" class="field-label" data-t="askTitle">Your Question:</label>
+        <textarea id="askInput" class="input-textarea" data-t-placeholder="askPlaceholder" placeholder="e.g., Why is the sky blue? How does Photosynthesis work? Explain Newton's Third Law."></textarea>
+        
+        <div class="examples-bar">
+          <span class="examples-label" data-t="askExamples">Try asking:</span>
+          <button type="button" class="example-pill" data-input-id="askInput" data-text="Why is the sky blue?" data-t="askEx1">Why is the sky blue?</button>
+          <button type="button" class="example-pill" data-input-id="askInput" data-text="How does photosynthesis work?" data-t="askEx2">How does photosynthesis work?</button>
+          <button type="button" class="example-pill" data-input-id="askInput" data-text="Explain Newton's Third Law of Motion." data-t="askEx3">Newton's 3rd Law</button>
+        </div>
+      </div>
+
+      <button id="btnAsk" class="btn-submit">
+        <span>💬</span> <span data-t="askSubmit">Ask Question</span>
+      </button>
+
+      <!-- Loading State -->
+      <div id="ask-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" data-t="loadingText">EduGenie is thinking...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="ask-error" class="error-box">
+        <div class="error-title" data-t="errorTitle">Oops! An error occurred</div>
+        <div id="ask-error-text"></div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="ask-results" class="results-area">
+        <div class="result-card">
+          <div class="card-title"><span>🎯</span> <span data-t="ansHeader">Direct Answer</span></div>
+          <div id="askResultAnswer" class="card-body"></div>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>📖</span> <span data-t="explHeader">Detailed Explanation</span></div>
+          <div id="askResultExplanation" class="card-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pane 2: Explain Concept -->
+    <section id="pane-explain" class="tool-pane" role="tabpanel">
+      <div class="pane-header">
+        <h1 class="pane-title" data-t="explainTitle">Explain a Concept</h1>
+        <p class="pane-desc" data-t="explainDesc">Get beginner-friendly explanations tailored to your expertise level.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="explainInput" class="field-label">Concept / Topic:</label>
+        <input type="text" id="explainInput" class="input-text" data-t-placeholder="explainPlaceholder" placeholder="e.g., Quantum Entanglement, Machine Learning, Supply and Demand">
+        
+        <div class="examples-bar">
+          <span class="examples-label" data-t="explainExamples">Try concepts:</span>
+          <button type="button" class="example-pill" data-input-id="explainInput" data-text="Quantum Entanglement" data-t="expEx1">Quantum Entanglement</button>
+          <button type="button" class="example-pill" data-input-id="explainInput" data-text="Machine Learning" data-t="expEx2">Machine Learning</button>
+          <button type="button" class="example-pill" data-input-id="explainInput" data-text="Supply and Demand" data-t="expEx3">Supply and Demand</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" data-t="levelLabel">Target Learning Level:</label>
+        <div class="level-selector">
+          <button type="button" class="level-btn selected" data-level="Beginner" data-t="lvlBeginner">Beginner 🟢</button>
+          <button type="button" class="level-btn" data-level="Intermediate" data-t="lvlIntermediate">Intermediate 🟡</button>
+          <button type="button" class="level-btn" data-level="Advanced" data-t="lvlAdvanced">Advanced 🔴</button>
+        </div>
+      </div>
+
+      <button id="btnExplain" class="btn-submit">
+        <span>💡</span> <span data-t="explainSubmit">Explain Concept</span>
+      </button>
+
+      <!-- Loading State -->
+      <div id="explain-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" data-t="loadingText">EduGenie is thinking...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="explain-error" class="error-box">
+        <div class="error-title" data-t="errorTitle">Oops! An error occurred</div>
+        <div id="explain-error-text"></div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="explain-results" class="results-area">
+        <div class="result-card">
+          <div class="card-title"><span>💡</span> <span data-t="explHeader">Explanation</span></div>
+          <div id="explainResultText" class="card-body"></div>
+        </div>
+
+        <div id="explainAnalogyCard" class="result-card">
+          <div class="card-title"><span>🌟</span> <span data-t="analogyHeader">Real-World Analogy</span></div>
+          <div id="explainAnalogyText" class="card-body"></div>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>📌</span> <span data-t="takeawaysHeader">Key Takeaways</span></div>
+          <ul id="explainTakeawaysList" class="bullet-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pane 3: Generate Quiz -->
+    <section id="pane-quiz" class="tool-pane" role="tabpanel">
+      <div class="pane-header">
+        <h1 class="pane-title" data-t="quizTitle">Generate a Quiz</h1>
+        <p class="pane-desc" data-t="quizDesc">Create 3 interactive multiple-choice questions from any topic or study notes.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="quizInput" class="field-label">Topic or Study Text:</label>
+        <textarea id="quizInput" class="input-textarea" data-t-placeholder="quizPlaceholder" placeholder="Enter a topic or paste study notes..."></textarea>
+        
+        <div class="examples-bar">
+          <span class="examples-label" data-t="quizExamples">Try topics:</span>
+          <button type="button" class="example-pill" data-input-id="quizInput" data-text="Cell Structure and Organelles" data-t="quizEx1">Cell Structure</button>
+          <button type="button" class="example-pill" data-input-id="quizInput" data-text="Python Data Structures (Lists, Dicts, Sets)" data-t="quizEx2">Python Data Structures</button>
+          <button type="button" class="example-pill" data-input-id="quizInput" data-text="Solar System Planets and Orbits" data-t="quizEx3">Solar System</button>
+        </div>
+      </div>
+
+      <button id="btnQuiz" class="btn-submit">
+        <span>🎯</span> <span data-t="quizSubmit">Generate 3-Question Quiz</span>
+      </button>
+
+      <!-- Loading State -->
+      <div id="quiz-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" data-t="loadingText">EduGenie is thinking...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="quiz-error" class="error-box">
+        <div class="error-title" data-t="errorTitle">Oops! An error occurred</div>
+        <div id="quiz-error-text"></div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="quiz-results" class="results-area">
+        <div id="quizScoreArea"></div>
+        <div id="quizQuestionsContainer"></div>
+      </div>
+    </section>
+
+    <!-- Pane 4: Summarize Notes -->
+    <section id="pane-summarize" class="tool-pane" role="tabpanel">
+      <div class="pane-header">
+        <h1 class="pane-title" data-t="summTitle">Summarize Notes</h1>
+        <p class="pane-desc" data-t="summDesc">Paste your study notes or long paragraphs to extract a concise summary, key points, and important terms.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="summarizeInput" class="field-label">Study Text / Notes:</label>
+        <textarea id="summarizeInput" class="input-textarea" data-t-placeholder="summPlaceholder" placeholder="Paste your lecture notes or article text here..."></textarea>
+        
+        <div class="examples-bar">
+          <span class="examples-label" data-t="summExamples">Try sample note:</span>
+          <button type="button" class="example-pill" data-input-id="summarizeInput" data-text="The water cycle describes how water evaporates from the Earth's surface, rises into the atmosphere, cools and condenses into rain or snow in clouds, and falls again to the surface as precipitation. The water falling on land collects in rivers and lakes, soil, and porous layers of rock, and much of it flows back into the oceans, where it will once more evaporate. The cycling of water in and out of the atmosphere is a significant aspect of the weather patterns on Earth." data-t="summEx1">The Water Cycle</button>
+          <button type="button" class="example-pill" data-input-id="summarizeInput" data-text="Democracy is a system of government where power is vested in the people, who rule either directly or through freely elected representatives. Key principles include fundamental human rights, constitutional rule of law, free and fair elections, and freedom of speech and expression." data-t="summEx2">Democracy & Rights</button>
+        </div>
+      </div>
+
+      <button id="btnSummarize" class="btn-submit">
+        <span>📝</span> <span data-t="summSubmit">Summarize Text</span>
+      </button>
+
+      <!-- Loading State -->
+      <div id="summarize-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" data-t="loadingText">EduGenie is thinking...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="summarize-error" class="error-box">
+        <div class="error-title" data-t="errorTitle">Oops! An error occurred</div>
+        <div id="summarize-error-text"></div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="summarize-results" class="results-area">
+        <div class="result-card">
+          <button id="btnCopySummary" class="btn-copy" data-t="copyBtn">Copy Summary</button>
+          <div class="card-title"><span>📋</span> <span data-t="summaryHeader">Executive Summary</span></div>
+          <div id="summarizeText" class="card-body"></div>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>⚡</span> <span data-t="keyPointsHeader">Key Points</span></div>
+          <ul id="summarizeKeyPoints" class="bullet-list"></ul>
+        </div>
+
+        <div id="summarizeTermsCard" class="result-card">
+          <div class="card-title"><span>📚</span> <span data-t="termsHeader">Important Terms & Definitions</span></div>
+          <div id="summarizeTermsGrid" class="terms-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pane 5: Learning Path -->
+    <section id="pane-learning-path" class="tool-pane" role="tabpanel">
+      <div class="pane-header">
+        <h1 class="pane-title" data-t="pathTitle">Create a Learning Path</h1>
+        <p class="pane-desc" data-t="pathDesc">Generate a structured step-by-step roadmap from beginner to advanced with milestones and recommended resources.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="pathInput" class="field-label">Subject or Career Goal:</label>
+        <input type="text" id="pathInput" class="input-text" data-t-placeholder="pathPlaceholder" placeholder="e.g., Web Development with Python, Data Science Basics, Organic Chemistry">
+        
+        <div class="examples-bar">
+          <span class="examples-label" data-t="pathExamples">Try roadmaps:</span>
+          <button type="button" class="example-pill" data-input-id="pathInput" data-text="Web Development with Python & FastAPI" data-t="pathEx1">Web Development</button>
+          <button type="button" class="example-pill" data-input-id="pathInput" data-text="Data Science & Machine Learning Fundamentals" data-t="pathEx2">Data Science</button>
+          <button type="button" class="example-pill" data-input-id="pathInput" data-text="Organic Chemistry Basics" data-t="pathEx3">Organic Chemistry</button>
+        </div>
+      </div>
+
+      <button id="btnPath" class="btn-submit">
+        <span>🗺️</span> <span data-t="pathSubmit">Generate Roadmap</span>
+      </button>
+
+      <!-- Loading State -->
+      <div id="path-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text" data-t="loadingText">EduGenie is thinking...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="path-error" class="error-box">
+        <div class="error-title" data-t="errorTitle">Oops! An error occurred</div>
+        <div id="path-error-text"></div>
+      </div>
+
+      <!-- Results Area -->
+      <div id="path-results" class="results-area">
+        <div class="result-card">
+          <div class="card-title"><span>📌</span> <span data-t="overviewHeader">Roadmap Overview</span></div>
+          <div id="pathOverviewText" class="card-body"></div>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>🚀</span> <span data-t="modulesHeader">Structured Modules</span></div>
+          <div id="pathModulesContainer" class="path-timeline"></div>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>🏁</span> <span data-t="milestonesHeader">Suggested Milestones</span></div>
+          <ul id="pathMilestonesList" class="bullet-list"></ul>
+        </div>
+
+        <div class="result-card">
+          <div class="card-title"><span>📚</span> <span data-t="resourcesHeader">Recommended Learning Resources</span></div>
+          <div id="pathResourcesContainer"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Setup Modal Overlay -->
+  <div id="setupModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">EduGenie Setup Instructions</h2>
+        <button id="closeModalBtn" class="btn-close">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Follow these steps to connect EduGenie to your Google Gemini API:
+      </p>
+
+      <ol style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.8;">
+        <li>Get your free Gemini API Key from <a href="https://aistudio.google.com/" target="_blank" style="color: #a5b4fc;">Google AI Studio</a>.</li>
+        <li>In your project root directory, copy <code>.env.example</code> to <code>.env</code>:
+          <div class="code-snippet">copy .env.example .env</div>
+        </li>
+        <li>Open <code>.env</code> and add your key:
+          <div class="code-snippet">GEMINI_API_KEY=your_actual_api_key_here</div>
+        </li>
+        <li>Start/restart the server:
+          <div class="code-snippet">python -m uvicorn app.main:app --reload</div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer-bar">
+    <p>&copy; 2026 EduGenie AI Learning Assistant. Built with FastAPI & Google Gemini API.</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/translations.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
